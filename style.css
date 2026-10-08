@@ -191,6 +191,13 @@ button:disabled {
   margin-top: 16px;
 }
 
+/* ---------- Delete button ---------- */
+.delete-btn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  background: #b91c1c;
+}
+
 /* ---------- Small screens ---------- */
 @media (max-width: 600px) {
   header h1 {

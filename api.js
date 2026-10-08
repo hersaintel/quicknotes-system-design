@@ -37,6 +37,9 @@ function setBusy(isBusy) {
   busy = isBusy;
   loadBtn.disabled = isBusy;
   submitBtn.disabled = isBusy;
+  for (const button of notesList.querySelectorAll(".delete-btn")) {
+    button.disabled = isBusy;
+  }
 }
 
 // ---------- The one reusable request function ----------
@@ -77,6 +80,11 @@ function createNote(note) {
   });
 }
 
+// DELETE: remove one note by its server id
+function deleteNote(id) {
+  return request(`${API_URL}/${id}`, { method: "DELETE" });
+}
+
 // ---------- Drawing the list ----------
 // User text only ever goes onto the page with textContent, so typed HTML stays plain text.
 function createNoteElement(note) {
@@ -102,7 +110,16 @@ function createNoteElement(note) {
   meta.className = "note-meta";
   meta.textContent = note.isLocal ? `Note #${note.id} (new)` : `Note #${note.id}`;
   content.appendChild(meta);
-  item.append(content);
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "delete-btn";
+  deleteBtn.textContent = "Delete";
+  deleteBtn.setAttribute("aria-label", `Delete note: ${note.title}`);
+  deleteBtn.disabled = busy;
+  deleteBtn.addEventListener("click", () => handleDelete(note));
+
+  item.append(content, deleteBtn);
   return item;
 }
 
@@ -211,6 +228,49 @@ async function handleSubmit(event) {
     console.error(error);
     // The form is left as it was, so the user can simply try again.
     setStatus("Sorry, we could not create your note. Please try again.", "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
+// ---------- DELETE: remove a note ----------
+// JSONPlaceholder is a practice server: it ACCEPTS new notes but never stores
+// them. So a note we just created does not really exist on the server, and a
+// DELETE for it may come back as 404 (not found).
+// Our approach:
+//   - Always send the DELETE request, so the page behaves like a real client.
+//   - Only remove the note from the page when the server confirms it (any 2xx).
+//   - For a note created on this page, treat a 404 as success too. Deleting
+//     something that is already gone leaves the same end result, which is what
+//     DELETE is meant to achieve, and we tell the user what happened.
+//   - Any other error keeps the note on the page and shows an error message.
+async function handleDelete(note) {
+  if (busy) {
+    return;
+  }
+  setBusy(true);
+  setStatus(`Deleting note ${note.id}...`, "loading");
+
+  try {
+    let message;
+
+    try {
+      const { status } = await deleteNote(note.id);
+      message = `Note ${note.id} deleted (status ${status}).`;
+    } catch (error) {
+      if (note.isLocal && error.status === 404) {
+        message = `Note ${note.id} removed. The practice server never stored it, so there was nothing to delete there.`;
+      } else {
+        throw error;
+      }
+    }
+
+    notes = notes.filter((item) => item.key !== note.key);
+    render();
+    setStatus(message, "success");
+  } catch (error) {
+    console.error(error);
+    setStatus("Sorry, we could not delete that note. Please try again.", "error");
   } finally {
     setBusy(false);
   }
