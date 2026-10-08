@@ -14,6 +14,18 @@
     </header>
 
     <main>
+      <section aria-labelledby="create-heading">
+        <h2 id="create-heading">Create a note</h2>
+        <form id="note-form" novalidate>
+          <label for="title-input">Title (required, up to 100 characters)</label>
+          <input type="text" id="title-input" name="title" autocomplete="off" />
+
+          <label for="body-input">Body (optional)</label>
+          <textarea id="body-input" name="body" rows="4"></textarea>
+
+          <button type="submit" id="submit-btn">Create note</button>
+        </form>
+      </section>
 
       <section aria-labelledby="notes-heading">
         <h2 id="notes-heading">Your notes</h2>

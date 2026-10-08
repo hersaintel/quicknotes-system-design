@@ -4,16 +4,25 @@
 // ---------- Settings ----------
 const API_URL = "https://jsonplaceholder.typicode.com/posts";
 const NOTES_LIMIT = 10;
+const MAX_TITLE_LENGTH = 100;
 
 // ---------- Page elements ----------
 const loadBtn = document.getElementById("load-btn");
 const statusMessage = document.getElementById("status");
 const notesList = document.getElementById("notes-list");
+const noteForm = document.getElementById("note-form");
+const titleInput = document.getElementById("title-input");
+const bodyInput = document.getElementById("body-input");
+const submitBtn = document.getElementById("submit-btn");
 
 // ---------- State ----------
 // Each note on the page is { key, id, title, body, isLocal }.
 let notes = [];
 let busy = false; // true while any request is running
+// "key" is unique on this page. "id" is the server's id. The practice server
+// gives EVERY new note the same id (101), so the id alone cannot tell two
+// new notes apart. That is why the page keeps its own key for each note.
+let localCounter = 0;
 
 // ---------- Status messages ----------
 // type is "loading", "success" or "error". Each one has its own look in style.css.
@@ -27,6 +36,7 @@ function setStatus(message, type) {
 function setBusy(isBusy) {
   busy = isBusy;
   loadBtn.disabled = isBusy;
+  submitBtn.disabled = isBusy;
 }
 
 // ---------- The one reusable request function ----------
@@ -56,6 +66,15 @@ async function request(url, options = {}) {
 async function getNotes() {
   const { data } = await request(`${API_URL}?_limit=${NOTES_LIMIT}`);
   return data;
+}
+
+// POST: create a note
+function createNote(note) {
+  return request(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=UTF-8" },
+    body: JSON.stringify(note),
+  });
 }
 
 // ---------- Drawing the list ----------
@@ -141,6 +160,63 @@ async function loadNotes() {
   }
 }
 
+// ---------- POST: create a note ----------
+// Returns an error message, or an empty string when the title is fine.
+function validateTitle(title) {
+  if (title === "") {
+    return "Please enter a title for your note.";
+  }
+  if (title.length > MAX_TITLE_LENGTH) {
+    return `The title must be ${MAX_TITLE_LENGTH} characters or fewer (yours has ${title.length}).`;
+  }
+  return "";
+}
+
+async function handleSubmit(event) {
+  event.preventDefault();
+  if (busy) {
+    return;
+  }
+
+  const title = titleInput.value.trim();
+  const body = bodyInput.value.trim();
+
+  const problem = validateTitle(title);
+  if (problem !== "") {
+    setStatus(problem, "error");
+    titleInput.focus();
+    return;
+  }
+
+  setBusy(true);
+  setStatus("Creating note...", "loading");
+
+  try {
+    const { status, data } = await createNote({ title, body, userId: 1 });
+
+    localCounter += 1;
+    notes.unshift({
+      key: `local-${localCounter}`,
+      id: data.id,
+      title: data.title,
+      body: data.body,
+      isLocal: true,
+    });
+    render();
+
+    noteForm.reset();
+    setStatus(`Note created (status ${status}, id ${data.id}).`, "success");
+    titleInput.focus();
+  } catch (error) {
+    console.error(error);
+    // The form is left as it was, so the user can simply try again.
+    setStatus("Sorry, we could not create your note. Please try again.", "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
 // ---------- Start ----------
 loadBtn.addEventListener("click", loadNotes);
+noteForm.addEventListener("submit", handleSubmit);
 render();

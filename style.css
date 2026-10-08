@@ -164,6 +164,33 @@ button:disabled {
   font-style: italic;
 }
 
+/* ---------- Create form ---------- */
+#note-form label {
+  display: block;
+  margin: 12px 0 4px;
+  font-weight: 600;
+}
+
+#note-form input,
+#note-form textarea {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  font: inherit;
+  border: 1px solid #9ca3af;
+  border-radius: 6px;
+}
+
+#note-form input:focus,
+#note-form textarea:focus {
+  outline: 2px solid var(--brand);
+  border-color: var(--brand);
+}
+
+#note-form button {
+  margin-top: 16px;
+}
+
 /* ---------- Small screens ---------- */
 @media (max-width: 600px) {
   header h1 {
